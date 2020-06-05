@@ -1,0 +1,28 @@
+﻿build.h v1.0.0
+1.移植版本
+
+build.h v2.0.0
+1.修改W600wifi库,解决特定情况下的死机问题
+
+build.h v2.1.0
+1.与生产工具适配优化参数写入速度
+
+build.h v2.2.0
+1.加入云端新增timezone_valid后的处理
+
+build.h v2.3.0  2019/7/29
+1.恢复出厂放进临界区
+
+build.h v2.3.1  2019/8/22
+1.airkiss_生成token方式
+
+build.h v2.3.2  2019/8/28
+1.进一步优化airkiss_生成token方式，并跑脚本得出数据验证
+
+build.h v2.4.0  2020/4/7
+1.W600_SDK升级至G3.04,详情见Changelog.txt说明
+2.Ayla_SDK升级至Ameba—1.5
+	增加batch_prop功能，使用示例见demo_batch.c文件
+	增加pingssl决定ayla ping用https还是http
+	增加http同步时间的机制防止时间跑偏
+	优化部分逻辑代码，去除部分不必要代码等
