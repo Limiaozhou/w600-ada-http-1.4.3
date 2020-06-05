@@ -163,12 +163,12 @@ static struct ada_sprop demo_props[] = {
 };
 
 
-//static 
+//static 演示发送对应名称的属性
 enum ada_err prop_send_by_name(const char *name)
 {
 	enum ada_err err;
 
-	err = ada_sprop_send_by_name(name);
+	err = ada_sprop_send_by_name(name);  //发送对应名称的属性，agent层接口
 	if (err) {
 		log_put(LOG_INFO "demo: %s: send of %s: err %d",
 		    __func__, name, err);
@@ -184,7 +184,7 @@ static void init_led_key(void)
     tls_gpio_cfg(CF_RELAY, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
 }
 
-static int get_gpio_value(enum tls_io_name io_num)
+static int get_gpio_value(enum tls_io_name io_num)  //演示读gpio
 {
 	u16 ret;
 
@@ -337,31 +337,31 @@ inval:
  */
 void demo_init(void)
 {
-	ada_sprop_mgr_register("ledevb", demo_props, ARRAY_LEN(demo_props));
+	ada_sprop_mgr_register("ledevb", demo_props, ARRAY_LEN(demo_props));  //简单属性表demo_props注册，agent层接口
 }
 
 void demo_idle(void)
 {
 	int oldRealyStatus = 1, nowRealyStatus;
 
-	log_thread_id_set(TASK_LABEL_DEMO);
+	log_thread_id_set(TASK_LABEL_DEMO);  //设置当前线程的日志名称，打印日志时的线程名，agent层接口
 #if RELAY_TST_EN
-	init_led_key();
+	init_led_key();  //演示led和key初始化
 #endif
 
 #if WATCH_DOG_EN
-    tls_watchdog_init(30*1000*1000);
+    tls_watchdog_init(30*1000*1000);  //看门狗初始化，agent层接口
 #endif
-	prop_send_by_name("oem_host_version");
+	prop_send_by_name("oem_host_version");  //演示发送对应名称的属性
 	prop_send_by_name("version");
 #ifdef JV_CTRL
-	sprintf(jv_ctrl,"{\"cmd\":1,\"utc\":%d}",clock_utc());
+	sprintf(jv_ctrl,"{\"cmd\":1,\"utc\":%d}",clock_utc());  //打印utc时间，获取utc为agent层接口
 	log_put("jv_ctrl :%s\n",jv_ctrl);
 #endif
 	while (1) 
     {
 #if RELAY_TST_EN    
-        nowRealyStatus = get_gpio_value(CF_RELAY);
+        nowRealyStatus = get_gpio_value(CF_RELAY);  //演示读gpio
         if( nowRealyStatus != oldRealyStatus) 
         {
             green_led = nowRealyStatus;
@@ -372,9 +372,9 @@ void demo_idle(void)
 #endif
 
 #if WATCH_DOG_EN
-        tls_watchdog_clr();
+        tls_watchdog_clr();  //清0看门狗，agent层接口
 #endif
-		tls_os_time_delay(HZ);
+		tls_os_time_delay(HZ);  //任务延时，agent层接口
 	}
 }
 

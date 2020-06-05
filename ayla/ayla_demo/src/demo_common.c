@@ -210,10 +210,10 @@ void demo_fact_log_cmd(int argc, char **argv)
 }
 
 
-void demo_idle_enter(void *arg)
+void demo_idle_enter(void *arg)  //演示空闲任务入口实现
 {
 
-	demo_idle();
+	demo_idle();  //演示空闲任务
 	AYLA_ASSERT_NOTREACHED();
 }
 
@@ -226,30 +226,30 @@ void button_detect_enter(void *arg)
 }
 #endif
 
-void ayla_demo_init(void)
+void ayla_demo_init(void)    //演示实现
 {
 	int rc;
 
-	demo_init();
+	demo_init();  //演示主用户功能，注册简单属性
     
 #ifdef AYLA_WIFI_SUPPORT
-        demo_wifi_init();
+        demo_wifi_init();  //演示WiFi初始化
 #endif
 
-	client_conf_init();
-	rc = ada_init();
+	client_conf_init();  //演示客户端配置初始化
+	rc = ada_init();  //获取agent初始化结果，agent层接口
 	if (rc) {
 		log_put(LOG_ERR "ADA init failed");
 		return;
 	}
 
-	demo_ota_init();
+	demo_ota_init();  //演示ota初始化
     
 #ifdef AYLA_WIFI_SUPPORT
-        demo_wifi_enable();
+        demo_wifi_enable();  //演示wifi使能
 #endif
 
-    fwup_update_autoflag();
+    fwup_update_autoflag();  //设置wifi自动重连，w600 sdk层接口
 
 #if 0
     if (xTaskCreateExt(demo_idle_enter, "A_LedEvb", (portSTACK_TYPE *)IdleTaskStk,

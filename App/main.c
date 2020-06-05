@@ -16,7 +16,7 @@
 
 void UserMain(void)
 {
-	ayla_demo_init();	
+	ayla_demo_init();  //演示
 
 #if DEMO_CONSOLE
 	CreateDemoTask();

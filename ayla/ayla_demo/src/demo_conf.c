@@ -41,18 +41,18 @@ typedef struct _at_command_item_{
 /*
  * Set platform ADA client configuration items.
  */
-void client_conf_init(void)
+void client_conf_init(void)    //演示客户端初始化
 {
 	struct ada_conf *cf = &ada_conf;
 	static u8 *mac;
 	int32_t	ret = -1;
 
 	//mac = LwIP_GetMAC(&netif[0]);
-	mac = wpa_supplicant_get_mac();
+	mac = wpa_supplicant_get_mac();  //获取mac地址，agent层接口
 	cf->mac_addr = mac;
 
 #ifdef AYLA_WIFI_SUPPORT
-	adw_conf_load();
+	adw_conf_load();  //加载WiFi配置，agent层接口
 #endif
 
 	cf->enable = 1;
@@ -67,7 +67,7 @@ void client_conf_init(void)
 	 * should set cf->region = "CN".
 	 */
 
-	demo_sched_init();
+	demo_sched_init();  //演示定时调度初始化
 }
 
 /*

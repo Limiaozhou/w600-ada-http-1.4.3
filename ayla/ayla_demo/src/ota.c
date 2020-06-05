@@ -181,14 +181,14 @@ static void demo_ota_save_done(void)
 }
 
 static struct ada_ota_ops demo_ota_ops = {
-	.notify = demo_ota_notify,
-	.save = demo_ota_save,
-	.save_done = demo_ota_save_done,
+	.notify = demo_ota_notify,  //演示ota通知回调
+	.save = demo_ota_save,  //演示ota保存回调
+	.save_done = demo_ota_save_done,  //演示ota保存完成回调
 };
 
-void demo_ota_init(void)
+void demo_ota_init(void)    //演示ota初始化
 {
     
-    tls_fls_fast_write_init();
-	ada_ota_register(OTA_HOST, &demo_ota_ops);
+    tls_fls_fast_write_init();  //高速写flash初始化，w600 sdk层接口
+	ada_ota_register(OTA_HOST, &demo_ota_ops);  //将演示ota操作注册到客户端ota操作，agent层接口
 }

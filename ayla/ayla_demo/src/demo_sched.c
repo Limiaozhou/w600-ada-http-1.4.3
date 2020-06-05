@@ -16,7 +16,7 @@ static const char *demo_scheds[] = DEMO_SCHED_NAMES;
 
 static u32 demo_sched_saved_run_time;	/* XXX should be in NVRAM */
 
-void demo_sched_init(void)
+void demo_sched_init(void)   //演示定时调度初始化
 {
 	enum ada_err err;
 	unsigned int i;
@@ -29,11 +29,11 @@ void demo_sched_init(void)
 	/*
 	 * Create schedules.
 	 */
-	err = ada_sched_init(count);
+	err = ada_sched_init(count);  //初始化定时调度器，分配count个定时调度器，agent层接口
 	ASSERT(!err);
 
 	for (i = 0; i < count; i++) {
-		err = ada_sched_set_name(i, demo_scheds[i]);
+		err = ada_sched_set_name(i, demo_scheds[i]);  //设置定时调度器名称，agent层接口
 		ASSERT(!err);
 	}
 }
