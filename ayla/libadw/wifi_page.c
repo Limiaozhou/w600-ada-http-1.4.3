@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2011-2013 Ayla Networks, Inc.  All rights reserved.
  *
  * Use of the accompanying software is permitted only in accordance
