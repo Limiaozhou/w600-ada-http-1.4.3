@@ -45,7 +45,7 @@ struct demo_ota {
 };
 static struct demo_ota demo_ota;
 
-static enum patch_state demo_ota_notify(unsigned int len, const char *ver)
+static enum patch_state demo_ota_notify(unsigned int len, const char *ver) //演示ota操纵的通知函数
 {
 	struct demo_ota *ota = &demo_ota;
 
@@ -63,13 +63,13 @@ static enum patch_state demo_ota_notify(unsigned int len, const char *ver)
 #ifdef AYLA_DEMO_TEST
 	ada_api_call(ADA_OTA_START, OTA_HOST);
 #else
-	ada_ota_start(OTA_HOST);
+	ada_ota_start(OTA_HOST); //启动ota，agent层函数
 #endif
 	return PB_DONE;
 }
 
 static enum patch_state demo_ota_save(unsigned int offset, const void *buf,
-	size_t req_len)
+	size_t req_len) //演示ota操作的保存函数
     {
         struct demo_ota *ota = &demo_ota;   
         static T_BOOTER booter;
@@ -89,7 +89,7 @@ static enum patch_state demo_ota_save(unsigned int offset, const void *buf,
             ota->rx_len += len;
             if(ota->rx_len == sizeof(T_BOOTER))
             {               
-                if (!tls_fwup_img_header_check(&booter))
+                if (!tls_fwup_img_header_check(&booter)) //检查镜像头
                 {
                     return PB_ERR_PHEAD;
                 }
@@ -160,7 +160,7 @@ static enum patch_state demo_ota_save(unsigned int offset, const void *buf,
     }
 
 
-static void demo_ota_save_done(void)
+static void demo_ota_save_done(void) //演示ota操作的保存完成函数
 {
 	struct demo_ota *ota = &demo_ota;
 	enum patch_state status;
@@ -171,13 +171,13 @@ static void demo_ota_save_done(void)
 #ifdef AYLA_DEMO_TEST
 		ada_api_call(ADA_OTA_REPORT, OTA_HOST, status);
 #else
-		ada_ota_report(OTA_HOST, status);
+		ada_ota_report(OTA_HOST, status); //ota未完成就发送报告，agent层函数
 #endif
 		return;
 	}
 
     tls_os_time_delay(HZ);
-    tls_sys_reset();
+    tls_sys_reset(); //系统复位
 }
 
 static struct ada_ota_ops demo_ota_ops = {

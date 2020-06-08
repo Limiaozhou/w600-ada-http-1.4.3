@@ -32,28 +32,28 @@
 /*
  * CLI command to reset the module, optionally to the factory configuration.
  */
-void demo_reset_cmd(int argc, char **argv)
+void demo_reset_cmd(int argc, char **argv) //演示恢复复位命令
 {
 #ifdef AYLA_FreeRTOS
 
 #endif
 	if (argc == 2 && !strcmp(argv[1], "factory")) {
 		printf("factory success\r\n");
-		ada_conf_reset(1);
+		ada_conf_reset(1); //恢复工厂配置，agent层函数
 	}
 #ifdef AYLA_FreeRTOS    
     if (argc == 2 && !strcmp(argv[1], "erase_all")) {
-		conf_erase_all();
+		conf_erase_all();  //擦除模块，agent层函数
 	}
 #endif
-	adap_conf_reset(0);
+	adap_conf_reset(0);  //配置重启，agent层函数
 }
 
 /*
  * setup_mode command.
  * setup_mode enable|disable|show [<key>]
  */
-void demo_setup_mode_cmd(int argc, char **argv)
+void demo_setup_mode_cmd(int argc, char **argv)  //演示设置模式命令
 {
 	if (argc == 2 && !strcmp(argv[1], "show")) {
 		printcli("setup_mode %sabled", conf_setup_mode ? "en" : "dis");
@@ -66,13 +66,13 @@ void demo_setup_mode_cmd(int argc, char **argv)
 			printcli("wrong key");
 			return;
 		}
-		ada_conf_setup_mode(1); /* saves if not in setup mode */
+		ada_conf_setup_mode(1); /* agent设置模式1，agent层函数，saves if not in setup mode */
 		printcli("para set ok\r\n");
 		return;
 	}
 #endif /* SETUP_ENABLE_KEY */
 	if (argc == 2 && !strcmp(argv[1], "disable")) {
-		ada_conf_setup_mode(0);	/* saves if clearing setup mode */
+		ada_conf_setup_mode(0);	/* agent设置模式0，agent层函数，saves if clearing setup mode */
 		printcli("para set ok\r\n");
 		return;
 	}
@@ -80,7 +80,7 @@ void demo_setup_mode_cmd(int argc, char **argv)
 	printcli("usage error");
 }
 
-void demo_time_cmd(int argc, char **argv)
+void demo_time_cmd(int argc, char **argv)  //演示时钟命令
 {
 	char buf[40];
 	unsigned long sec;
@@ -88,7 +88,7 @@ void demo_time_cmd(int argc, char **argv)
 	u32 t;
 
 	if (argc == 1) {
-		clock_fmt(buf, sizeof(buf), clock_utc());
+		clock_fmt(buf, sizeof(buf), clock_utc()); //转换时间格式，agent层
 		printcli("%s  %lu ms since boot", buf, clock_ms());
 		return;
 	}
@@ -98,12 +98,12 @@ usage:
 		printcli("usage: time YYYY-MM-DDTHH:MM:SS");
 		return;
 	}
-	t = clock_parse(argv[1]);
+	t = clock_parse(argv[1]);  //时钟解析，agent层
 	if (!t || t < CLOCK_START) {
 		printcli("time setting invalid");
 		goto usage;
 	}
-	if (clock_set(t, CS_LOCAL)) {
+	if (clock_set(t, CS_LOCAL)) { //设置新的时间，agent层
 		printcli("time setting failed");
 		printcli("para set err\r\n");
 		return;
@@ -114,22 +114,22 @@ usage:
 	return;
 }
 
-void demo_client_cmd(int argc, char **argv)
+void demo_client_cmd(int argc, char **argv)  //演示客户端配置
 {
 	if (argc == 2 && !strcmp(argv[1], "test")) {
 		ada_conf.test_connect = 1;
 		return;
 	} else if (argc == 4 && strcmp(argv[1], "server") == 0 &&
 	    strcmp(argv[2], "region") == 0) {
-		if (!mfg_or_setup_mode_ok()) {
+		if (!mfg_or_setup_mode_ok()) { //判断是否为设置模式，agent层函数
 			printcli("para set err\r\n");
 			return;
 		}
-		if (client_set_region(argv[3])) {
+		if (client_set_region(argv[3])) {  //设置服务器域，成功返回0，agent层函数
 			printcli("para set err\r\n");
 			printcli("unknown region code %s\n", argv[3]);
 		} else {
-			conf_save_config();
+			conf_save_config();  //保存配置
 			printcli("para set ok\r\n");
 			return;
 		}
@@ -140,14 +140,14 @@ void demo_client_cmd(int argc, char **argv)
 }
 
 
-void demo_save_cmd(int argc, char **argv)
+void demo_save_cmd(int argc, char **argv)  //演示保存命令
 {
 	char *args[] = { "conf", "save", NULL};
 
-	conf_cli(2, args);
+	conf_cli(2, args); //配置命令行接口，agent层函数
 }
 
-void demo_show_cmd(int argc, char **argv)
+void demo_show_cmd(int argc, char **argv)  //演示显示命令
 {
 	char *args[] = { "conf", "show", NULL};
 
@@ -156,16 +156,16 @@ void demo_show_cmd(int argc, char **argv)
 	}
 
 	if (!strcmp(argv[1], "conf")) {
-		conf_cli(2, args);
+		conf_cli(2, args);  //配置命令行接口，agent层函数
 		return;
 	}
 	if (!strcmp(argv[1], "version")) {
-		printcli("%s\n", adap_conf_sw_version());
+		printcli("%s\n", adap_conf_sw_version());  //演示显示版本
 		return;
 	}
 #ifdef AYLA_WIFI_SUPPORT
 	if (!strcmp(argv[1], "wifi")) {
-		adw_wifi_show();
+		adw_wifi_show();  //WiFi显示，agent层函数
 		return;
 	}
 #endif
@@ -175,7 +175,7 @@ usage:
 	return;
 }
 
-void demo_fact_log_cmd(int argc, char **argv)
+void demo_fact_log_cmd(int argc, char **argv) //演示工厂日志命令
 {
 	struct ada_conf *cf = &ada_conf;
 	u32 now;
@@ -188,13 +188,13 @@ void demo_fact_log_cmd(int argc, char **argv)
 		printcli("factory-log: invalid usage");
 		return;
 	}
-	if (clock_source() <= CS_DEF) {
+	if (clock_source() <= CS_DEF) { //判断时钟源，agent层函数
 		printcli("factory-log: clock not set");
 		printcli("para set err\r\n");
 		return;
 	}
-	now = clock_utc();
-	clock_fill_details(&ci, now);
+	now = clock_utc();  //获取utc时间
+	clock_fill_details(&ci, now);  //填充时钟信息
 	printcli("factory-log line:\r\n");
 	printcli("3,%lu,%2.2lu/%2.2u/%2.2u %2.2u:%2.2u:%2.2u UTC,label,0,"
 	    "%s,%s,%2.2x%2.2x%2.2x%2.2x%2.2x%2.2x,%s,"

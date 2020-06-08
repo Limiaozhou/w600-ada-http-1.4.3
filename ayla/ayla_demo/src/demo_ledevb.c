@@ -54,37 +54,45 @@
 #include "wm_wifi.h"
 #include "wm_include.h"
 
+#include "device.h"
+#include "hal/pin.h"
+#include "bsp/drv_pin.h"
 
 #define BUILD_PID			 "SN0-0000000"
 #define BUILD_PROGNAME "ayla_ledevb_demo"
 #define BUILD_VERSION  "v1.0.0"
 #define BUILD_STRING	  BUILD_VERSION " "  __DATE__ " " __TIME__
 
-#define D1_LED0         WM_IO_PB_10  //network status indicate, network config indicate
-#define CF_RELAY        WM_IO_PB_09
-#define D2_LED0         WM_IO_PB_08  //relay status indicate
-#define S1_BUTTON       WM_IO_PB_11
+//#define D1_LED0         WM_IO_PB_10  //network status indicate, network config indicate
+//#define CF_RELAY        WM_IO_PB_09
+//#define D2_LED0         WM_IO_PB_08  //relay status indicate
+//#define S1_BUTTON       WM_IO_PB_11
 #define DETECT_INTERVAL (HZ/10)
 #define CONFIG_TIMEOUT  60*5      //seconds
 #define WATCH_DOG_EN    1
 #define RELAY_TST_EN    0
 
-enum lws_state{
-    ADA_CLIENT_UP,
-    CHECK_NET_STATUS,
-    HANDLE_KEY_AND_BUTTON,
-    ADA_CLIENT_DOWN
-};
+#define PIN_LED_BLUE 28
+#define PIN_LED_RED  29
+#define PIN_PLUG     30
+#define PIN_KEY      27
 
-enum ledState {
-    LED_ALWAYS_OFF,
-    LED_ALWAYS_ON,
-    LED_BLINK_1_LEVEL,
-    LED_BLINK_2_LEVEL,
-};
+//enum lws_state{
+//    ADA_CLIENT_UP,
+//    CHECK_NET_STATUS,
+//    HANDLE_KEY_AND_BUTTON,
+//    ADA_CLIENT_DOWN
+//};
 
-const char mod_sw_build[] = BUILD_STRING;
-const char mod_sw_version[] = BUILD_PROGNAME " " BUILD_STRING;
+//enum ledState {
+//    LED_ALWAYS_OFF,
+//    LED_ALWAYS_ON,
+//    LED_BLINK_1_LEVEL,
+//    LED_BLINK_2_LEVEL,
+//};
+
+//const char mod_sw_build[] = BUILD_STRING;
+//const char mod_sw_version[] = BUILD_PROGNAME " " BUILD_STRING;
 
 /*
  * The oem and oem_model strings determine the host name for the
@@ -96,28 +104,35 @@ const char mod_sw_version[] = BUILD_PROGNAME " " BUILD_STRING;
 char oem[] = DEMO_OEM_ID;
 char oem_model[] = DEMO_LEDEVB_MODEL;
 
-static unsigned blue_button;
-static u8 blue_led;
-static u8 green_led;
-static int input;
- int output;
-static int decimal_in;
- int decimal_out;
+//static unsigned blue_button;
+//static u8 blue_led;
+//static u8 red_led;
+static u8 plug;
+//static int input;
+// int output;
+//static int decimal_in;
+// int decimal_out;
 #ifdef JV_CTRL
 static char jv_ctrl[100];
 #endif
 static char version[] = BUILD_PID " "BUILD_PROGNAME " " BUILD_STRING;
-static char cmd_buf[TLV_MAX_STR_LEN + 1];
+//static char cmd_buf[TLV_MAX_STR_LEN + 1];
 static char demo_host_version[] = "1.0-rtk";	/* property template version */
 
-static enum ada_err demo_led_set(struct ada_sprop *, const void *, size_t);
-static enum ada_err demo_int_set(struct ada_sprop *, const void *, size_t);
-static enum ada_err demo_cmd_set(struct ada_sprop *, const void *, size_t);
+static enum ada_err demo_plug_set(struct ada_sprop *, const void *, size_t);
+//static enum ada_err demo_int_set(struct ada_sprop *, const void *, size_t);
+//static enum ada_err demo_cmd_set(struct ada_sprop *, const void *, size_t);
 #ifdef JV_CTRL
 static enum ada_err jv_ctrl_set(struct ada_sprop *, const void *, size_t);
 #endif
 
-static struct ada_sprop demo_props[] = {
+void pin_init(void);
+void pin_write(u16 pin, u16 status);
+u16 pin_read(u16 pin);
+
+rt_device_t device_pin_t = NULL;
+
+static struct ada_sprop demo_props[] = { //演示简单属性表，自己实现各属性内容
 	/*
 	 * version properties
 	 */
@@ -129,33 +144,29 @@ static struct ada_sprop demo_props[] = {
 	/*
 	 * boolean properties
 	 */
-	{ "Blue_button", ATLV_BOOL, &blue_button, sizeof(blue_button),
-	    ada_sprop_get_bool, NULL},
-	{ "Blue_LED", ATLV_BOOL, &blue_led, sizeof(blue_led),
-	    ada_sprop_get_bool, demo_led_set },
-	{ "Green_LED", ATLV_BOOL, &green_led, sizeof(green_led),
-	    ada_sprop_get_bool, demo_led_set },
+	{ "Plug", ATLV_BOOL, &plug, sizeof(plug),
+	    ada_sprop_get_bool, demo_plug_set },
 	/*
 	 * string properties
 	 */
-	{ "cmd", ATLV_UTF8, &cmd_buf[0], sizeof(cmd_buf),
-	    ada_sprop_get_string, demo_cmd_set },
-	{ "log", ATLV_UTF8, &cmd_buf[0], sizeof(cmd_buf),
-	    ada_sprop_get_string, NULL },
+//	{ "cmd", ATLV_UTF8, &cmd_buf[0], sizeof(cmd_buf),
+//	    ada_sprop_get_string, demo_cmd_set },
+//	{ "log", ATLV_UTF8, &cmd_buf[0], sizeof(cmd_buf),
+//	    ada_sprop_get_string, NULL },
 	/*
 	 * integer properties
 	 */
-	{ "input", ATLV_INT, &input, sizeof(input),
-	    ada_sprop_get_int, demo_int_set },
-	{ "output", ATLV_INT, &output, sizeof(output),
-	    ada_sprop_get_int, NULL },
+//	{ "input", ATLV_INT, &input, sizeof(input),
+//	    ada_sprop_get_int, demo_int_set },
+//	{ "output", ATLV_INT, &output, sizeof(output),
+//	    ada_sprop_get_int, NULL },
 	/*
 	 * decimal properties
 	 */
-	{ "decimal_in", ATLV_CENTS, &decimal_in, sizeof(decimal_in),
-	    ada_sprop_get_int, demo_int_set },
-	{ "decimal_out", ATLV_CENTS, &decimal_out, sizeof(decimal_out),
-	    ada_sprop_get_int, NULL },
+//	{ "decimal_in", ATLV_CENTS, &decimal_in, sizeof(decimal_in),
+//	    ada_sprop_get_int, demo_int_set },
+//	{ "decimal_out", ATLV_CENTS, &decimal_out, sizeof(decimal_out),
+//	    ada_sprop_get_int, NULL },
 #ifdef JV_CTRL
 	{ "jv_ctrl", ATLV_UTF8, &jv_ctrl[0], sizeof(jv_ctrl),
 	    ada_sprop_get_string, jv_ctrl_set},
@@ -176,31 +187,31 @@ enum ada_err prop_send_by_name(const char *name)
     return err;
 }
 
-static void init_led_key(void)
-{
-	tls_gpio_cfg(S1_BUTTON, WM_GPIO_DIR_INPUT, WM_GPIO_ATTR_FLOATING);
-    tls_gpio_cfg(D1_LED0, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
-    tls_gpio_cfg(D2_LED0, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
-    tls_gpio_cfg(CF_RELAY, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
-}
+//static void init_led_key(void)
+//{
+//	tls_gpio_cfg(S1_BUTTON, WM_GPIO_DIR_INPUT, WM_GPIO_ATTR_FLOATING);
+//    tls_gpio_cfg(D1_LED0, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
+//    tls_gpio_cfg(D2_LED0, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
+//    tls_gpio_cfg(CF_RELAY, WM_GPIO_DIR_OUTPUT, WM_GPIO_ATTR_PULLHIGH);
+//}
 
-static int get_gpio_value(enum tls_io_name io_num)  //演示读gpio
-{
-	u16 ret;
+//static int get_gpio_value(enum tls_io_name io_num)  //演示读gpio
+//{
+//	u16 ret;
 
-	ret = tls_gpio_read(io_num);
-	return ret;
-}
-static void set_gpio_value(enum tls_io_name io_num, bool io_state)
-{
-	//printcli("set_led %d %d\n", led, on);
-	tls_gpio_write(io_num, io_state);
-}
+//	ret = tls_gpio_read(io_num);
+//	return ret;
+//}
+//static void set_gpio_value(enum tls_io_name io_num, bool io_state)
+//{
+//	//printcli("set_led %d %d\n", led, on);
+//	tls_gpio_write(io_num, io_state);
+//}
 
 /*
  * Demo set function for bool properties.
  */
-static enum ada_err demo_led_set(struct ada_sprop *sprop,
+static enum ada_err demo_plug_set(struct ada_sprop *sprop,
 				const void *buf, size_t len)
 {
 	int ret = 0;
@@ -209,10 +220,9 @@ static enum ada_err demo_led_set(struct ada_sprop *sprop,
 	if (ret) {
 		return ret;
 	}
-	if (sprop->val == &blue_led) {
-        set_gpio_value(D2_LED0, blue_led);
-	} else if (sprop->val == &green_led) {
-        set_gpio_value(CF_RELAY, green_led);
+	if (sprop->val == &plug) {
+        pin_write(PIN_LED_RED, plug);
+		pin_write(PIN_PLUG, plug);
 	}
 	log_put(LOG_INFO "%s: %s set to %u",
 	    __func__, sprop->name, *(u8 *)sprop->val);
@@ -222,50 +232,50 @@ static enum ada_err demo_led_set(struct ada_sprop *sprop,
 /*
  * Demo set function for integer and decimal properties.
  */
-static enum ada_err demo_int_set(struct ada_sprop *sprop,
-				const void *buf, size_t len)
-{
-	int ret;
+//static enum ada_err demo_int_set(struct ada_sprop *sprop,
+//				const void *buf, size_t len)
+//{
+//	int ret;
 
-	ret = ada_sprop_set_int(sprop, buf, len);
-	if (ret) {
-		return ret;
-	}
+//	ret = ada_sprop_set_int(sprop, buf, len);
+//	if (ret) {
+//		return ret;
+//	}
 
-	if (sprop->val == &input) {
-		log_put(LOG_INFO "%s: %s set to %d",
-		    __func__, sprop->name, input);
-		output = input;
-		prop_send_by_name("output");
-	} else if (sprop->val == &decimal_in) {
-		log_put(LOG_INFO "%s: %s set to %d",
-		    __func__, sprop->name, decimal_in);
-		decimal_out = decimal_in;
-		prop_send_by_name("decimal_out");
-	} else {
-		return AE_NOT_FOUND;
-	}
-	return AE_OK;
-}
+//	if (sprop->val == &input) {
+//		log_put(LOG_INFO "%s: %s set to %d",
+//		    __func__, sprop->name, input);
+//		output = input;
+//		prop_send_by_name("output");
+//	} else if (sprop->val == &decimal_in) {
+//		log_put(LOG_INFO "%s: %s set to %d",
+//		    __func__, sprop->name, decimal_in);
+//		decimal_out = decimal_in;
+//		prop_send_by_name("decimal_out");
+//	} else {
+//		return AE_NOT_FOUND;
+//	}
+//	return AE_OK;
+//}
 
 /*
  * Demo set function for string properties.
  */
-static enum ada_err demo_cmd_set(struct ada_sprop *sprop,
-				const void *buf, size_t len)
-{
-	int ret;
+//static enum ada_err demo_cmd_set(struct ada_sprop *sprop,
+//				const void *buf, size_t len)
+//{
+//	int ret;
 
-	ret = ada_sprop_set_string(sprop, buf, len);
-	if (ret) {
-		return ret;
-	}
+//	ret = ada_sprop_set_string(sprop, buf, len);
+//	if (ret) {
+//		return ret;
+//	}
 
-	prop_send_by_name("log");
-	log_put(LOG_INFO "%s: cloud set %s to \"%s\"",
-	    __func__, sprop->name, cmd_buf);
-	return AE_OK;
-}
+//	prop_send_by_name("log");
+//	log_put(LOG_INFO "%s: cloud set %s to \"%s\"",
+//	    __func__, sprop->name, cmd_buf);
+//	return AE_OK;
+//}
 
 #ifdef JV_CTRL
 static enum ada_err jv_ctrl_set(struct ada_sprop *sprop, const void * buf, size_t len)
@@ -335,16 +345,18 @@ inval:
 /*
  * Initialize property manager.
  */
-void demo_init(void)
+void demo_init(void)  //演示主用户实现
 {
 	ada_sprop_mgr_register("ledevb", demo_props, ARRAY_LEN(demo_props));  //简单属性表demo_props注册，agent层接口
 }
 
 void demo_idle(void)
 {
-	int oldRealyStatus = 1, nowRealyStatus;
+//	int oldRealyStatus = 1, nowRealyStatus;
+	u8 key_status = 0, key_flag = 0;
 
 	log_thread_id_set(TASK_LABEL_DEMO);  //设置当前线程的日志名称，打印日志时的线程名，agent层接口
+	pin_init();
 #if RELAY_TST_EN
 	init_led_key();  //演示led和key初始化
 #endif
@@ -360,6 +372,28 @@ void demo_idle(void)
 #endif
 	while (1) 
     {
+		if(pin_read(PIN_KEY))
+		{
+			tls_os_time_delay(5);
+			if(pin_read(PIN_KEY))
+			{
+				if(key_flag)
+				{
+					plug = !plug;
+					key_flag = 0;
+					
+					pin_write(PIN_LED_RED, plug);
+					pin_write(PIN_PLUG, plug);
+//					ada_sprop_get_bool(&demo_props[2], &key_status, sizeof(key_status));
+					prop_send_by_name("Plug");
+				}
+			}
+			else
+				key_flag = 1;
+		}
+		else
+			key_flag = 1;
+		
 #if RELAY_TST_EN    
         nowRealyStatus = get_gpio_value(CF_RELAY);  //演示读gpio
         if( nowRealyStatus != oldRealyStatus) 
@@ -374,51 +408,104 @@ void demo_idle(void)
 #if WATCH_DOG_EN
         tls_watchdog_clr();  //清0看门狗，agent层接口
 #endif
-		tls_os_time_delay(HZ);  //任务延时，agent层接口
+		tls_os_time_delay(5);  //任务延时，agent层接口
 	}
 }
 
-static int gpioStateReverse(enum tls_io_name ledNum)
-{    
-    int status = get_gpio_value(ledNum);
-    (status==1)?(status = 0):(status = 1);
-    set_gpio_value(ledNum, status);
-    return status;
-}
+//static int gpioStateReverse(enum tls_io_name ledNum)
+//{    
+//    int status = get_gpio_value(ledNum);
+//    (status==1)?(status = 0):(status = 1);
+//    set_gpio_value(ledNum, status);
+//    return status;
+//}
 
-static void ledStateControl(enum tls_io_name ledNum, enum ledState state, u8 baseCycle)
+//static void ledStateControl(enum tls_io_name ledNum, enum ledState state, u8 baseCycle)
+//{
+//    static u8 blink_1_HZ = 0;
+//    static u8 blink_2_HZ = 0;
+//    
+//    switch(state)
+//    {
+//        case LED_ALWAYS_OFF:
+//            set_gpio_value(ledNum, 0);
+//            break;
+//        case LED_ALWAYS_ON:
+//            set_gpio_value(ledNum, 1);
+//            break;
+//        case LED_BLINK_1_LEVEL:
+//            {
+//                blink_1_HZ ++;
+//                if( blink_1_HZ > HZ/baseCycle/2 ) {
+//                    gpioStateReverse(ledNum);
+//                    blink_1_HZ = 0;
+//                }
+//            }
+//            break;
+//        case LED_BLINK_2_LEVEL:
+//            {
+//                blink_2_HZ ++;
+//                if( blink_2_HZ > HZ/2/baseCycle/8 ) {
+//                    gpioStateReverse(ledNum);
+//                    blink_2_HZ = 0;
+//                }
+//            }
+//            break;
+//        default:
+//            break;
+//    }
+//}
+
+void pin_init(void)
 {
-    static u8 blink_1_HZ = 0;
-    static u8 blink_2_HZ = 0;
-    
-    switch(state)
-    {
-        case LED_ALWAYS_OFF:
-            set_gpio_value(ledNum, 0);
-            break;
-        case LED_ALWAYS_ON:
-            set_gpio_value(ledNum, 1);
-            break;
-        case LED_BLINK_1_LEVEL:
-            {
-                blink_1_HZ ++;
-                if( blink_1_HZ > HZ/baseCycle/2 ) {
-                    gpioStateReverse(ledNum);
-                    blink_1_HZ = 0;
-                }
-            }
-            break;
-        case LED_BLINK_2_LEVEL:
-            {
-                blink_2_HZ ++;
-                if( blink_2_HZ > HZ/2/baseCycle/8 ) {
-                    gpioStateReverse(ledNum);
-                    blink_2_HZ = 0;
-                }
-            }
-            break;
-        default:
-            break;
-    }
+	struct rt_device_pin_mode pin_mode = {0};
+	struct rt_device_pin_status pin_status = {0};
+	
+	wm_hw_pin_init();
+	
+	device_pin_t = rt_device_find("pin");
+	if(!device_pin_t)
+		printf("pin device find failed, in file %s, line %d, func %s", __FILE__, __LINE__, __func__);
+	rt_device_open(device_pin_t, RT_DEVICE_OFLAG_RDWR);
+	
+	pin_mode.pin = PIN_LED_BLUE;
+	pin_mode.mode = PIN_MODE_OUTPUT;
+	pin_status.pin = PIN_LED_BLUE;
+	pin_status.status = 0;
+	rt_device_control(device_pin_t, 0, &pin_mode);
+	rt_device_write(device_pin_t, 0, &pin_status, sizeof(pin_status));
+	
+	pin_mode.pin = PIN_LED_RED;
+	pin_mode.mode = PIN_MODE_OUTPUT;
+	pin_status.pin = PIN_LED_RED;
+	rt_device_control(device_pin_t, 0, &pin_mode);
+	rt_device_write(device_pin_t, 0, &pin_status, sizeof(pin_status));
+	
+	pin_mode.pin = PIN_PLUG;
+	pin_mode.mode = PIN_MODE_OUTPUT;
+	pin_status.pin = PIN_PLUG;
+	rt_device_control(device_pin_t, 0, &pin_mode);
+	rt_device_write(device_pin_t, 0, &pin_status, sizeof(pin_status));
+	
+	pin_mode.pin = PIN_KEY;
+	pin_mode.mode = PIN_MODE_INPUT_PULLUP;
+	rt_device_control(device_pin_t, 0, &pin_mode);
 }
 
+void pin_write(u16 pin, u16 status)
+{
+	struct rt_device_pin_status pin_status = {0};
+	
+	pin_status.pin = pin;
+	pin_status.status = status;
+	rt_device_write(device_pin_t, 0, &pin_status, sizeof(pin_status));
+}
+
+u16 pin_read(u16 pin)
+{
+	struct rt_device_pin_status pin_status = {0};
+	
+	pin_status.pin = pin;
+	rt_device_read(device_pin_t, 0, &pin_status, sizeof(pin_status));
+	return pin_status.status;
+}

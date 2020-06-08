@@ -52,7 +52,7 @@ void client_conf_init(void)    //演示客户端初始化
 	cf->mac_addr = mac;
 
 #ifdef AYLA_WIFI_SUPPORT
-	adw_conf_load();  //加载WiFi配置，agent层接口
+	adw_conf_load();  //加载设备WiFi配置，agent层接口
 #endif
 
 	cf->enable = 1;
@@ -90,9 +90,9 @@ const char *adap_conf_sw_build(void)
  * client_conf_sw_version() returns the string reported to LAN clients with the
  * name, version, and more.
  */
-const char *adap_conf_sw_version(void)
+const char *adap_conf_sw_version(void) //演示显示agent版本
 {
-	return ada_version;
+	return ada_version;  //agent层数据
 }
 
 void rtl_sys_reset(int argc, char **argv)
@@ -118,23 +118,23 @@ static const char wifi_cli_help[] = "<name> <value>";
 static const char show_cli_help[] = "<conf|version>";
 #endif
 
-static const struct cmd_info client_conf_cmds[] = {
-	CMD_INIT("client", demo_client_cmd, client_cli_help),
-	CMD_INIT("conf", conf_cli, conf_cli_help),
-	CMD_INIT("factory-log", demo_fact_log_cmd, NULL),
-	CMD_INIT("file", ada_conf_file_cli, file_cli_help),
-	CMD_INIT("id", ada_conf_id_cli, id_cli_help),
-	CMD_INIT("log", ada_log_cli, ada_log_cli_help),
-	CMD_INIT("oem", ada_conf_oem_cli, conf_oem_cli_help),
-	CMD_INIT("reset", demo_reset_cmd, NULL),
-	CMD_INIT("save", demo_save_cmd, NULL),
-	CMD_INIT("setup_mode", demo_setup_mode_cmd, setup_mode_cli_help),
-	CMD_INIT("show", demo_show_cmd, show_cli_help),
-	CMD_INIT("time", demo_time_cmd, NULL),
+static const struct cmd_info client_conf_cmds[] = {  //命令信息表，agent层数据
+	CMD_INIT("client", demo_client_cmd, client_cli_help),  //演示客户端配置命令
+	CMD_INIT("conf", conf_cli, conf_cli_help),  //配置命令行接口，agent层函数
+	CMD_INIT("factory-log", demo_fact_log_cmd, NULL),  //演示工厂日志命令
+	CMD_INIT("file", ada_conf_file_cli, file_cli_help),  //agent配置文件命令行接口，agent层函数
+	CMD_INIT("id", ada_conf_id_cli, id_cli_help), //agent配置id命令行接口，agent层函数
+	CMD_INIT("log", ada_log_cli, ada_log_cli_help), //agent日志命令行接口，agent层函数
+	CMD_INIT("oem", ada_conf_oem_cli, conf_oem_cli_help), //agent配置oem命令行接口，agent层函数
+	CMD_INIT("reset", demo_reset_cmd, NULL),  //演示恢复复位命令
+	CMD_INIT("save", demo_save_cmd, NULL), //演示保存命令
+	CMD_INIT("setup_mode", demo_setup_mode_cmd, setup_mode_cli_help), //演示设置模式命令
+	CMD_INIT("show", demo_show_cmd, show_cli_help), //演示显示命令
+	CMD_INIT("time", demo_time_cmd, NULL),  //演示时间配置命令
 #ifdef AYLA_WIFI_SUPPORT
-	CMD_INIT("wifi", adw_wifi_cli, wifi_cli_help),
+	CMD_INIT("wifi", adw_wifi_cli, wifi_cli_help), //WiFi命令行接口，agent层函数
 #endif
-	CMD_END_DEFAULT(demo_default_cli_cmd),
+	CMD_END_DEFAULT(demo_default_cli_cmd), //命令信息表结尾
 };
 
 /* Ameba only supports the console command in the format CMD=PARAM,
@@ -171,10 +171,11 @@ static void cli_wrapper(char *cmd, char *arg)
 			return;
 		}
 	}
-	cmd_handle_argv(client_conf_cmds, argc, argv);
+    //命令参数处理句柄函数，agent层接口，最终执行命令信息表中对应命令信息的函数指针
+	cmd_handle_argv(client_conf_cmds, argc, argv);  
 }
 
-CLI_WRAPPER_DEFINE(client)
+CLI_WRAPPER_DEFINE(client)  //演示申明at指令条目的执行函数
 CLI_WRAPPER_DEFINE(conf)
 CLI_WRAPPER_DEFINE_WITH_FUN(factory-log, factory_log)
 CLI_WRAPPER_DEFINE(file)
@@ -188,7 +189,7 @@ CLI_WRAPPER_DEFINE(show)
 CLI_WRAPPER_DEFINE(time)
 CLI_WRAPPER_DEFINE(wifi)
 
-static log_item_t ayla_at_cmd_table[] = {
+static log_item_t ayla_at_cmd_table[] = {  //演示at指令条目表
 	CLI_CMD_ENTRY(client),
 	CLI_CMD_ENTRY(conf),
 	CLI_CMD_ENTRY_WITH_FUN(factory-log, factory_log),
@@ -209,6 +210,7 @@ void at_ayla_cli_init(void)
 	//log_service_add_table(ayla_at_cmd_table, ARRAY_LEN(ayla_at_cmd_table));
 }
 
+//用户自己实现命令行接口解析，在串口接收函数void parse_atcmd_line(struct tls_uart *uart)中被调用
 int at_ayla_cli_parse(struct tls_uart *uart)
 {
     struct tls_uart_circ_buf *recv = &uart->uart_port->recv;
@@ -256,7 +258,7 @@ int at_ayla_cli_parse(struct tls_uart *uart)
         buf[cmd_len-2]='\0';
     }
     buf[cmd_len]='\0';
-	pItem = ayla_at_cmd_table;
+	pItem = ayla_at_cmd_table; //指向演示at指令条目表
 	for(i = 0; i <  ARRAY_LEN(ayla_at_cmd_table); i++)
 	{
 		if(cmd_len < strlen(pItem->log_cmd) || memcmp(buf, pItem->log_cmd, strlen(pItem->log_cmd)))
@@ -264,7 +266,7 @@ int at_ayla_cli_parse(struct tls_uart *uart)
 			pItem++;
 			continue;
 		}
-		pItem->at_act(buf + strlen(pItem->log_cmd));
+		pItem->at_act(buf + strlen(pItem->log_cmd));  //执行演示表中成员条目的执行函数
         tls_mem_free(buf);
 		return 0;
 	}

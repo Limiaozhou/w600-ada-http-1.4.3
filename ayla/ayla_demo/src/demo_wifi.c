@@ -110,7 +110,7 @@ void demo_wifi_init(void)   //演示WiFi初始化
 
 	adw_wifi_event_register(demo_wifi_event_handler, NULL); //WiFi事件demo_wifi_event_handler注册，agent层接口
 	adw_wifi_init();  //wifi初始化，agent层接口
-	adw_wifi_page_init(enable_redirect);  //WiFi页初始化，agent层接口
+	adw_wifi_page_init(enable_redirect);  //WiFi页初始化为0，agent层接口
 
 	/*
 	 * Set the network name for AP mode, for use during Wi-Fi setup.

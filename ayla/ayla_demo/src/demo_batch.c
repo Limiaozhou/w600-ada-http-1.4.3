@@ -59,12 +59,12 @@ static struct batch_ctx *batch = NULL;
 static struct timer batch_timer;
 static struct timer sample_timer;
 
-static void demo_batch_send_done(size_t size_sent)
+static void demo_batch_send_done(size_t size_sent) //演示批处理发送完成处理
 {
 	printf("send done! Sent batch data size = %u\n", size_sent);
 }
 
-static void demo_batch_error_cb(int batch_id, int status)
+static void demo_batch_error_cb(int batch_id, int status) //演示批处理出错处理
 {
 	if (status != HTTP_STATUS_OK) 
 		printf("send err! batch_id = %d, status = %d\n", batch_id, status);
@@ -155,22 +155,22 @@ static void demo_sample_timer_handler(struct timer *timer)
 }
 
 /* pack prop for output and decimal_out send to cloud together*/
-int demo_batch_test(void)
+int demo_batch_test(void) //在配置命令行接口函数void conf_cli(int argc, char **argv)中调用
 {
 	if (!batch) {
-		batch = ada_batch_create(BATCH_DPS_MAX, BATCH_DATA_MAX);
-		ada_batch_set_err_cb(demo_batch_error_cb);
+		batch = ada_batch_create(BATCH_DPS_MAX, BATCH_DATA_MAX); //创建agent批处理，agent层
+		ada_batch_set_err_cb(demo_batch_error_cb); //设置批处理出错回调函数为demo_batch_error_cb，agent层
 	}
 	
 #if 1
-	s64 stamp = clock_get(NULL);
+	s64 stamp = clock_get(NULL); //获取时间，agent层
 	int	ret;
 
-	ret = ada_batch_add_prop_by_name(batch,"output", stamp);
+	ret = ada_batch_add_prop_by_name(batch,"output", stamp); //批处理按名字添加属性，agent层
 	if(ret == AE_BUF)
 	{
 		printf("batch buffer is full or buffer size is small\n");
-		ada_batch_send(batch, demo_batch_send_done);
+		ada_batch_send(batch, demo_batch_send_done); //发送批处理，注册发送完成回调函数demo_batch_send_done，agent层
 	}
 	else
 	{

@@ -377,7 +377,7 @@
               <MiscControls>--c99 --gnu </MiscControls>
               <Define>WM_W600 AYLA_FreeRTOS CONF_NO_ID_FILE XXD_BIN_TO_C LOG_LOCK AYLA_WIFI_SUPPORT AYLA_LAN_SUPPORT FLASH_CONF_CACHE  AYLA_BATCH_PROP_SUPPORT JV_CTRL AIRKISS</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\..\Include;..\..\..\Src\Network\api;..\..\..\Src\Wlan\Driver;..\..\..\Src\Wlan\Supplicant;..\..\..\Platform\Common\Params;..\..\..\Platform\Common\task;..\..\..\Platform\Common\mem;..\..\..\Platform\Common\fwup;..\..\..\Platform\Common\utils;..\..\..\Platform\Inc;..\..\..\Platform\Sys;..\..\..\Src\App\wm_atcmd;..\..\..\Src\App\demo;..\..\..\Src\App\dhcpserver;..\..\..\Src\App\dnsserver;..\..\..\Src\App\matrixssl;..\..\..\Src\App\matrixssl\crypto;..\..\..\Src\App\libupnp-1.6.19\ixml\inc;..\..\..\Src\App\libupnp-1.6.19\upnp\inc;..\..\..\Src\App\libupnp-1.6.19\ixml\include;..\..\..\Src\App\libupnp-1.6.19\threadutil\include;..\..\..\Src\App\libupnp-1.6.19\upnp\include;..\..\..\Src\App\gmediarender-0.0.6;..\..\..\Src\App\web;..\..\..\Src\App\cloud;..\..\..\Src\App\cJSON;..\..\..\Src\App\ajtcl-15.04.00a\inc;..\..\..\Src\App\ajtcl-15.04.00a\target\winnermicro;..\..\..\Src\App\ajtcl-15.04.00a\external\sha2;..\..\..\Src\App\cJSON;..\..\..\Src\App\cloud\Kii;..\..\..\Src\App\rmms;..\..\..\Demo;..\..\..\Src\App\ntp;..\..\..\Src\OS\OS_ports;..\..\..\Src\App\httpclient;..\..\..\Src\App\oneshotconfig;..\..\..\Lib;..\..\..\Src\App\iperf;..\..\..\Src\OS\uCOS-II;..\..\..\Src\OS\uCOS-II\ports;..\..\..\Src\OS\uCOS-II\source;..\..\..\Src\OS\RTOS\include;..\..\..\Platform\Common\crypto;..\..\..\Include\App;..\..\..\Include\Driver;..\..\..\Include\Net;..\..\..\Include\OS;..\..\..\Include\Platform;..\..\..\Include\WiFi;..\..\..\Src\App\matrixssl\core;..\..\..\Platform\Common\crypto\digest;..\..\..\Platform\Common\crypto\math;..\..\..\Platform\Common\crypto\symmetric;..\..\..\Src\App\mqtt;..\..\..\Src\App\iperf;..\..\..\Src\App\ping;..\..\..\Src\App\polarssl\include;..\..\..\Src\App\mDNS\mDNSPosix;..\..\..\Src\App\mDNS\mDNSCore;..\..\..\Src\Network\lwip2.0.3\include;..\..\..\Src\App\OTA;..\..\..\Src\App\libwebsockets-2.1-stable;..\..\..\ayla\libayla\include;..\..\..\ayla\libada\include;..\..\..\ayla\include;..\..\..\ayla\libnet\include;..\..\..\ayla\ayla_demo\src;..\..\..\ayla\ext\jsmn;..\..\..\ayla\libada;..\..\..\ayla\libnet\w600\include;..\..\..\Src\Network\lwip2.0.3\include\posix;..\..\..\Src\Network\lwip2.0.3;..\..\..\ayla\libadw\include;..\..\..\ayla\libadw</IncludePath>
+              <IncludePath>..\..\..\Include;..\..\..\Src\Network\api;..\..\..\Src\Wlan\Driver;..\..\..\Src\Wlan\Supplicant;..\..\..\Platform\Common\Params;..\..\..\Platform\Common\task;..\..\..\Platform\Common\mem;..\..\..\Platform\Common\fwup;..\..\..\Platform\Common\utils;..\..\..\Platform\Inc;..\..\..\Platform\Sys;..\..\..\Src\App\wm_atcmd;..\..\..\Src\App\demo;..\..\..\Src\App\dhcpserver;..\..\..\Src\App\dnsserver;..\..\..\Src\App\matrixssl;..\..\..\Src\App\matrixssl\crypto;..\..\..\Src\App\libupnp-1.6.19\ixml\inc;..\..\..\Src\App\libupnp-1.6.19\upnp\inc;..\..\..\Src\App\libupnp-1.6.19\ixml\include;..\..\..\Src\App\libupnp-1.6.19\threadutil\include;..\..\..\Src\App\libupnp-1.6.19\upnp\include;..\..\..\Src\App\gmediarender-0.0.6;..\..\..\Src\App\web;..\..\..\Src\App\cloud;..\..\..\Src\App\cJSON;..\..\..\Src\App\ajtcl-15.04.00a\inc;..\..\..\Src\App\ajtcl-15.04.00a\target\winnermicro;..\..\..\Src\App\ajtcl-15.04.00a\external\sha2;..\..\..\Src\App\cJSON;..\..\..\Src\App\cloud\Kii;..\..\..\Src\App\rmms;..\..\..\Demo;..\..\..\Src\App\ntp;..\..\..\Src\OS\OS_ports;..\..\..\Src\App\httpclient;..\..\..\Src\App\oneshotconfig;..\..\..\Lib;..\..\..\Src\App\iperf;..\..\..\Src\OS\uCOS-II;..\..\..\Src\OS\uCOS-II\ports;..\..\..\Src\OS\uCOS-II\source;..\..\..\Src\OS\RTOS\include;..\..\..\Platform\Common\crypto;..\..\..\Include\App;..\..\..\Include\Driver;..\..\..\Include\Net;..\..\..\Include\OS;..\..\..\Include\Platform;..\..\..\Include\WiFi;..\..\..\Src\App\matrixssl\core;..\..\..\Platform\Common\crypto\digest;..\..\..\Platform\Common\crypto\math;..\..\..\Platform\Common\crypto\symmetric;..\..\..\Src\App\mqtt;..\..\..\Src\App\iperf;..\..\..\Src\App\ping;..\..\..\Src\App\polarssl\include;..\..\..\Src\App\mDNS\mDNSPosix;..\..\..\Src\App\mDNS\mDNSCore;..\..\..\Src\Network\lwip2.0.3\include;..\..\..\Src\App\OTA;..\..\..\Src\App\libwebsockets-2.1-stable;..\..\..\ayla\libayla\include;..\..\..\ayla\libada\include;..\..\..\ayla\include;..\..\..\ayla\libnet\include;..\..\..\ayla\ayla_demo\src;..\..\..\ayla\ext\jsmn;..\..\..\ayla\libada;..\..\..\ayla\libnet\w600\include;..\..\..\Src\Network\lwip2.0.3\include\posix;..\..\..\Src\Network\lwip2.0.3;..\..\..\ayla\libadw\include;..\..\..\ayla\libadw;..\..\..\ayla\drivers</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1780,6 +1780,26 @@
               <FileName>wifi_w600.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\ayla\libadw\wifi_w600.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>drives</GroupName>
+          <Files>
+            <File>
+              <FileName>device.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ayla\drivers\device.c</FilePath>
+            </File>
+            <File>
+              <FileName>pin.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ayla\drivers\hal\pin.c</FilePath>
+            </File>
+            <File>
+              <FileName>drv_pin.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ayla\drivers\bsp\drv_pin.c</FilePath>
             </File>
           </Files>
         </Group>
