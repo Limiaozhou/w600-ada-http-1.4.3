@@ -126,7 +126,7 @@ static char demo_host_version[] = "1.0-rtk";	/* property template version */
 
 rt_device_t device_pin_t = NULL;
 tls_os_timer_t *tiemr_led_handle = NULL;
-u8 produce_check = 0;
+u8 produce_check = 0; //产测模式
 
 enum
 {
@@ -154,6 +154,7 @@ static void user_task(void *arg);
 static void timer_led_callback(void *ptmr, void *parg);
 static u8 get_device_wifi_state(void);
 static int demo_wifi_product_check(void);
+static void uesr_wifi_setup_mode_set(u8 mode);
 
 static struct ada_sprop demo_props[] = { //演示简单属性表，自己实现各属性内容
 	/*
@@ -387,6 +388,7 @@ void demo_idle(void)
 #endif
 	prop_send_by_name("oem_host_version");  //演示发送对应名称的属性
 	prop_send_by_name("version");
+	prop_send_by_name("Plug");
 #ifdef JV_CTRL
 	sprintf(jv_ctrl,"{\"cmd\":1,\"utc\":%d}",clock_utc());  //打印utc时间，获取utc为agent层接口
 	log_put("jv_ctrl :%s\n",jv_ctrl);
@@ -457,7 +459,7 @@ void demo_idle(void)
 
 void user_init(void)
 {
-	adw_wifi_setup_mode_set(1);
+	uesr_wifi_setup_mode_set(1); //启动设置AirKiss配网模式，1为AirKiss，0为AP，2为等待
 	pin_init(); //按键、继电器、指示灯的普通IO口初始化
 	tls_os_task_create(NULL, "user_task",
 	                    user_task,
@@ -531,7 +533,7 @@ static void user_task(void *arg)
 	u16 key_cnt = 0; //按键计时
 	u8 wifi_configured = 0, wifi_connected = 0; //配网、连网标志，有配置网络为1，连网成功为1
 	
-	while(1)
+	while (1)
 	{
 		if (adw_wifi_curr_wifi_get(adw_wifi_curr_profile_get()) != 0) //有配置过网络
 			wifi_configured = 1;
@@ -545,17 +547,18 @@ static void user_task(void *arg)
 			wifi_connected = 1;
 		}
 		
-		if(conf_was_reset)
+		if (conf_was_reset && demo_wifi_product_check()) //恢复出厂设置下，判断产测模式
 		{
-			if(demo_wifi_product_check())
+			if(!produce_check) //开始启动一次慢闪
 			{
-				produce_check = 1;
 				tls_os_timer_change(tiemr_led_handle, 350);
 				tls_os_timer_start(tiemr_led_handle);
+				printf("User produce slowly blink\r\n");
 			}
-			else
-				produce_check = 0;
+			produce_check = 1; //设置为产测模式
 		}
+		else
+			produce_check = 0;
 		
 		if (!pin_read(PIN_KEY)) //上拉，按下为0
 		{
@@ -607,30 +610,30 @@ static void user_task(void *arg)
 			}
 		}
 		
-		if ((key_net_flag == 1) && !wifi_configured)
+		if ((key_net_flag == 1) && !wifi_configured) //没有配置过网络才能切换配网方式
 		{
 			key_net_flag = 2;
 			
 			if(!adw_wifi_setup_mode_get()) //获取是否为AP配网，是为0
 			{
-				adw_wifi_setup_mode_set(1); //设置AirKiss配网，1
+				uesr_wifi_setup_mode_set(1);
 				tls_os_timer_change(tiemr_led_handle, 75);
-				printf("key set wifi to airkiss\r\n");
+				printf("User key set wifi to airkiss\r\n");
 			}
 			else
 			{
-				adw_wifi_setup_mode_set(0);
+				uesr_wifi_setup_mode_set(0);
 				tls_os_timer_change(tiemr_led_handle, 350);
-				printf("key set wifi to ap\r\n");
+				printf("User key set wifi to ap\r\n");
 			}
 			tls_os_timer_start(tiemr_led_handle);
 		}
 		
-		if ((key_factory_flag == 1) && wifi_configured)
+		if (key_factory_flag == 1)
 		{
 			key_factory_flag = 2;
 			
-			adw_wifi_setup_mode_set(1);
+			printf("User key set to factory\r\n");
 			tls_os_timer_change(tiemr_led_handle, 75);
 			tls_os_timer_start(tiemr_led_handle);
 			ada_conf_reset(1);
@@ -647,12 +650,11 @@ static void timer_led_callback(void *ptmr, void *parg)
 	pin_write(PIN_LED_BLUE, led_blue_status);
 	led_blue_status = !led_blue_status;
 	
-	if(*(u8*)parg)
+	if(*(u8*)parg) //传入参数为产测模式标志，不为0就是产测模式
 	{
 		plug = led_blue_status;
 		pin_write(PIN_LED_RED, plug);
 		pin_write(PIN_PLUG, plug);
-//		prop_send_by_name("Plug");
 	}
 }
 
@@ -710,4 +712,13 @@ static int demo_wifi_product_check(void)
 			return TRUE;
 	}
 	return FALSE;
-}	
+}
+
+static void uesr_wifi_setup_mode_set(u8 mode)
+{
+	demo_wifi_disable();
+	tls_os_time_delay(10); //之间要有一定延时才能设置生效
+	adw_wifi_setup_mode_set(mode);
+	tls_os_time_delay(10);
+	demo_wifi_enable();
+}

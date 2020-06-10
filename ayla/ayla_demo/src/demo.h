@@ -75,6 +75,8 @@ void dhcp_set_bound_handler(void (*handler)(ip_addr_t *));
 void ayla_demo_init(void);
 extern u8 *wpa_supplicant_get_mac(void);
 
+void demo_wifi_enable(void);  //演示WiFi使能
+void demo_wifi_disable(void);  //演示WiFi失能
 void user_init(void);
 
 #endif /* __AYLA_DEMO_H__ */

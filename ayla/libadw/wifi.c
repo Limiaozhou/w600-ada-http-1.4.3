@@ -46,7 +46,7 @@ static u8 adw_aks_send_fin;
 static char ssid_hostname[33];
 const char * const adw_wifi_errors[] = WIFI_ERRORS;
 
-struct adw_state adw_state;// = {.setup_mode = 1};
+struct adw_state adw_state;
 ADW_SIZE_INIT				/* for ADW_SIZE_DEBUG */
 
 static struct net_callback adw_wifi_cbmsg_join;

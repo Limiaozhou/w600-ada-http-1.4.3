@@ -98,8 +98,15 @@ static void demo_wifi_event_handler(enum adw_wifi_event_id id, void *arg)  //演
 void demo_wifi_enable(void)  //演示WiFi使能
 {
 	char *argv[] = { "wifi", "enable" };
-
+	
 	adw_wifi_cli(2, argv);  //调用命令接口配置WiFi使能，agent层接口
+}
+
+void demo_wifi_disable(void)  //演示WiFi失能
+{
+	char *argv[] = { "wifi", "disable" };
+	
+	adw_wifi_cli(2, argv);
 }
 
 void demo_wifi_init(void)   //演示WiFi初始化
