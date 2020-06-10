@@ -61,9 +61,9 @@
 #include "hal/pin.h"
 #include "bsp/drv_pin.h"
 
-#define BUILD_PID			 "SN0-0000000"
+#define BUILD_PID			 "SN0-8888888"
 #define BUILD_PROGNAME "ayla_ledevb_demo"
-#define BUILD_VERSION  "v1.0.0"
+#define BUILD_VERSION  "v1.0.2"
 #define BUILD_STRING	  BUILD_VERSION " "  __DATE__ " " __TIME__
 
 //#define D1_LED0         WM_IO_PB_10  //network status indicate, network config indicate
@@ -112,7 +112,7 @@ char oem_model[] = DEMO_LEDEVB_MODEL;
 //static unsigned blue_button;
 //static u8 blue_led;
 //static u8 red_led;
-static u8 plug;
+static u8 Switch_Control;
 //static int input;
 // int output;
 //static int decimal_in;
@@ -168,7 +168,7 @@ static struct ada_sprop demo_props[] = { //演示简单属性表，自己实现�
 	/*
 	 * boolean properties
 	 */
-	{ "Plug", ATLV_BOOL, &plug, sizeof(plug),
+	{ "Switch_Control", ATLV_BOOL, &Switch_Control, sizeof(Switch_Control),
 	    ada_sprop_get_bool, demo_plug_set },
 	/*
 	 * string properties
@@ -244,9 +244,9 @@ static enum ada_err demo_plug_set(struct ada_sprop *sprop,
 	if (ret) {
 		return ret;
 	}
-	if (sprop->val == &plug) {
-        pin_write(PIN_LED_RED, plug);
-		pin_write(PIN_PLUG, plug);
+	if (sprop->val == &Switch_Control) {
+        pin_write(PIN_LED_RED, Switch_Control);
+		pin_write(PIN_PLUG, Switch_Control);
 	}
 	log_put(LOG_INFO "%s: %s set to %u",
 	    __func__, sprop->name, *(u8 *)sprop->val);
@@ -388,7 +388,7 @@ void demo_idle(void)
 #endif
 	prop_send_by_name("oem_host_version");  //演示发送对应名称的属性
 	prop_send_by_name("version");
-	prop_send_by_name("Plug");
+	prop_send_by_name("Switch_Control");
 #ifdef JV_CTRL
 	sprintf(jv_ctrl,"{\"cmd\":1,\"utc\":%d}",clock_utc());  //打印utc时间，获取utc为agent层接口
 	log_put("jv_ctrl :%s\n",jv_ctrl);
@@ -535,12 +535,10 @@ static void user_task(void *arg)
 	
 	while (1)
 	{
-		if (adw_wifi_curr_wifi_get(adw_wifi_curr_profile_get()) != 0) //有配置过网络
+		if ((!wifi_configured) && (adw_wifi_curr_wifi_get(adw_wifi_curr_profile_get()) != 0)) //有配置过网络
 			wifi_configured = 1;
-		else
-			wifi_configured = 0;
 		
-		if ((get_device_wifi_state() == MODULE_CONNECTED_WIFI) && (!wifi_connected)) //连网成功，熄蓝灯
+		if ((!wifi_connected) && (get_device_wifi_state() == MODULE_CONNECTED_WIFI)) //连网成功，熄蓝灯
 		{
 			tls_os_timer_stop(tiemr_led_handle);
 			pin_write(PIN_LED_BLUE, 0);
@@ -603,14 +601,14 @@ static void user_task(void *arg)
 			}
 			else
 			{
-				plug = !plug;
-				pin_write(PIN_LED_RED, plug);
-				pin_write(PIN_PLUG, plug);
-				prop_send_by_name("Plug");
+				Switch_Control = !Switch_Control;
+				pin_write(PIN_LED_RED, Switch_Control);
+				pin_write(PIN_PLUG, Switch_Control);
+				prop_send_by_name("Switch_Control");
 			}
 		}
 		
-		if ((key_net_flag == 1) && !wifi_configured) //没有配置过网络才能切换配网方式
+		if ((!wifi_configured) && (key_net_flag == 1)) //没有配置过网络才能切换配网方式
 		{
 			key_net_flag = 2;
 			
@@ -629,7 +627,7 @@ static void user_task(void *arg)
 			tls_os_timer_start(tiemr_led_handle);
 		}
 		
-		if (key_factory_flag == 1)
+		if (wifi_configured && (key_factory_flag == 1)) //有配置过网络才能恢复出厂
 		{
 			key_factory_flag = 2;
 			
@@ -652,9 +650,9 @@ static void timer_led_callback(void *ptmr, void *parg)
 	
 	if(*(u8*)parg) //传入参数为产测模式标志，不为0就是产测模式
 	{
-		plug = led_blue_status;
-		pin_write(PIN_LED_RED, plug);
-		pin_write(PIN_PLUG, plug);
+		Switch_Control = led_blue_status;
+		pin_write(PIN_LED_RED, Switch_Control);
+		pin_write(PIN_PLUG, Switch_Control);
 	}
 }
 
