@@ -46,7 +46,7 @@ static u8 adw_aks_send_fin;
 static char ssid_hostname[33];
 const char * const adw_wifi_errors[] = WIFI_ERRORS;
 
-struct adw_state adw_state;
+struct adw_state adw_state;// = {.setup_mode = 1};
 ADW_SIZE_INIT				/* for ADW_SIZE_DEBUG */
 
 static struct net_callback adw_wifi_cbmsg_join;
@@ -2277,4 +2277,56 @@ int adap_wifi_in_ap_mode(void)
 int adap_net_get_signal(int *signalp)
 {
 	return adw_wmi_get_rssi(signalp);
+}
+
+/* user added api */
+unsigned char adw_wifi_setup_mode_get(void)
+{
+	struct adw_state *wifi = &adw_state;
+
+	return wifi->setup_mode;
+}
+
+void adw_wifi_setup_mode_set(u8 hi)
+{
+	struct adw_state *wifi = &adw_state;
+	wifi->setup_mode = hi;
+}
+
+int adw_wifi_curr_profile_get(void)
+{
+	struct adw_state *wifi = &adw_state ;
+
+	return wifi->curr_profile;
+}
+
+int adw_wifi_curr_wifi_get(int idx)
+{
+	struct adw_state *wifi = &adw_state ;
+	struct adw_profile *prof;
+	char ssid_buf[33];
+
+	if (idx < 0 || idx >= ADW_WIFI_PROF_CT) {
+		return 0;
+	}
+	
+	prof = &wifi->profile[idx] ;
+	adw_format_ssid(&prof->ssid, ssid_buf, sizeof(ssid_buf));
+
+	if((ssid_buf[0] =='\0')|| (prof->enable ==0))
+		return 0;
+	else 
+		return 1;
+}
+
+void adw_wifi_get_state( enum adw_wifi_conn_state *state_s,
+		enum adw_scan_state *scan_state_s )
+{
+		struct adw_state *wifi = &adw_state;
+		
+		if(state_s == NULL || scan_state_s == NULL)
+			return;
+
+		*state_s = wifi->state;
+		*scan_state_s = wifi->scan_state;
 }

@@ -9,6 +9,9 @@
 #ifndef __AYLA_ADW_WIFI_H__
 #define __AYLA_ADW_WIFI_H__
 
+#include <ayla/utypes.h>
+//#include "wifi_int.h"
+
 #define ADW_WIFI_PROF_CT	11	/* number of profiles */
 #define ADW_WIFI_PROF_AP	(ADW_WIFI_PROF_CT - 1) /* profile for AP mode */
 #define ADW_WIFI_SCAN_CT	20	/* number of scan results kept */
@@ -67,6 +70,15 @@ void adw_wifi_http_ios_get(struct server_req *);
 
 void adw_wifi_event_register(void (*fn)(enum adw_wifi_event_id, void *arg),
 				void *arg);
+
+/* user added api */
+unsigned char adw_wifi_setup_mode_get(void);
+void adw_wifi_setup_mode_set(u8 hi);
+int adw_wifi_curr_profile_get(void);
+int adw_wifi_curr_wifi_get(int idx);
+//void adw_wifi_get_state( enum adw_wifi_conn_state *state_s,
+//		enum adw_scan_state *scan_state_s );
+
 
 /*
  * Wi-Fi synchronization interfaces.

@@ -54,6 +54,9 @@
 #include "wm_wifi.h"
 #include "wm_include.h"
 
+#include "adw/wifi.h"
+#include "wifi_int.h"
+
 #include "device.h"
 #include "hal/pin.h"
 #include "bsp/drv_pin.h"
@@ -72,10 +75,12 @@
 #define WATCH_DOG_EN    1
 #define RELAY_TST_EN    0
 
-#define PIN_LED_BLUE 28
-#define PIN_LED_RED  29
-#define PIN_PLUG     30
+#define USER_TASK_STK_SIZE 1024
+#define PIN_LED_BLUE 23
+#define PIN_LED_RED  22
+#define PIN_PLUG     21
 #define PIN_KEY      27
+#define PRODUCT_WIFI_SSID  "sa_produce_01"  //product wifi name
 
 //enum lws_state{
 //    ADA_CLIENT_UP,
@@ -119,6 +124,22 @@ static char version[] = BUILD_PID " "BUILD_PROGNAME " " BUILD_STRING;
 //static char cmd_buf[TLV_MAX_STR_LEN + 1];
 static char demo_host_version[] = "1.0-rtk";	/* property template version */
 
+rt_device_t device_pin_t = NULL;
+tls_os_timer_t *tiemr_led_handle = NULL;
+u8 produce_check = 0;
+
+enum
+{
+	MODULE_STANDBY 				= 0x00,	//待机状态
+	MODULE_CONFIGURE_WIFI 		= 0x01,	//配网状态
+	MODULE_CONNECTING_WIFI   	= 0x02,	//配网中
+	MODULE_CONNECTED_WIFI   	= 0x03,	//配网结束
+	MODULE_CONNECTED_CLOUD  	= 0x04,	//连云状态
+};
+
+extern void adw_wifi_get_state( enum adw_wifi_conn_state *state_s,
+		enum adw_scan_state *scan_state_s );
+
 static enum ada_err demo_plug_set(struct ada_sprop *, const void *, size_t);
 //static enum ada_err demo_int_set(struct ada_sprop *, const void *, size_t);
 //static enum ada_err demo_cmd_set(struct ada_sprop *, const void *, size_t);
@@ -126,11 +147,13 @@ static enum ada_err demo_plug_set(struct ada_sprop *, const void *, size_t);
 static enum ada_err jv_ctrl_set(struct ada_sprop *, const void *, size_t);
 #endif
 
-void pin_init(void);
-void pin_write(u16 pin, u16 status);
-u16 pin_read(u16 pin);
-
-rt_device_t device_pin_t = NULL;
+static void pin_init(void);
+static void pin_write(u16 pin, u16 status);
+static u16 pin_read(u16 pin);
+static void user_task(void *arg);
+static void timer_led_callback(void *ptmr, void *parg);
+static u8 get_device_wifi_state(void);
+static int demo_wifi_product_check(void);
 
 static struct ada_sprop demo_props[] = { //演示简单属性表，自己实现各属性内容
 	/*
@@ -353,10 +376,8 @@ void demo_init(void)  //演示主用户实现
 void demo_idle(void)
 {
 //	int oldRealyStatus = 1, nowRealyStatus;
-	u8 key_status = 0, key_flag = 0;
 
 	log_thread_id_set(TASK_LABEL_DEMO);  //设置当前线程的日志名称，打印日志时的线程名，agent层接口
-	pin_init();
 #if RELAY_TST_EN
 	init_led_key();  //演示led和key初始化
 #endif
@@ -372,28 +393,6 @@ void demo_idle(void)
 #endif
 	while (1) 
     {
-		if(pin_read(PIN_KEY))
-		{
-			tls_os_time_delay(5);
-			if(pin_read(PIN_KEY))
-			{
-				if(key_flag)
-				{
-					plug = !plug;
-					key_flag = 0;
-					
-					pin_write(PIN_LED_RED, plug);
-					pin_write(PIN_PLUG, plug);
-//					ada_sprop_get_bool(&demo_props[2], &key_status, sizeof(key_status));
-					prop_send_by_name("Plug");
-				}
-			}
-			else
-				key_flag = 1;
-		}
-		else
-			key_flag = 1;
-		
 #if RELAY_TST_EN    
         nowRealyStatus = get_gpio_value(CF_RELAY);  //演示读gpio
         if( nowRealyStatus != oldRealyStatus) 
@@ -408,7 +407,7 @@ void demo_idle(void)
 #if WATCH_DOG_EN
         tls_watchdog_clr();  //清0看门狗，agent层接口
 #endif
-		tls_os_time_delay(5);  //任务延时，agent层接口
+		tls_os_time_delay(HZ);  //任务延时，agent层接口
 	}
 }
 
@@ -456,7 +455,23 @@ void demo_idle(void)
 //    }
 //}
 
-void pin_init(void)
+void user_init(void)
+{
+	adw_wifi_setup_mode_set(1);
+	pin_init(); //按键、继电器、指示灯的普通IO口初始化
+	tls_os_task_create(NULL, "user_task",
+	                    user_task,
+	                    (void *)0,
+	                    (void *)0,
+	                    USER_TASK_STK_SIZE * sizeof(u32),
+	                    configMAX_PRIORITIES / 2,
+	                    0); //创建应用任务user_task
+	
+	tls_os_timer_create(&tiemr_led_handle, timer_led_callback, &produce_check, 75, 1, (u8*)"timer_led"); //创建led定时器timer_led_callback
+	tls_os_timer_start(tiemr_led_handle);
+}
+
+static void pin_init(void)
 {
 	struct rt_device_pin_mode pin_mode = {0};
 	struct rt_device_pin_status pin_status = {0};
@@ -492,7 +507,7 @@ void pin_init(void)
 	rt_device_control(device_pin_t, 0, &pin_mode);
 }
 
-void pin_write(u16 pin, u16 status)
+static void pin_write(u16 pin, u16 status)
 {
 	struct rt_device_pin_status pin_status = {0};
 	
@@ -501,7 +516,7 @@ void pin_write(u16 pin, u16 status)
 	rt_device_write(device_pin_t, 0, &pin_status, sizeof(pin_status));
 }
 
-u16 pin_read(u16 pin)
+static u16 pin_read(u16 pin)
 {
 	struct rt_device_pin_status pin_status = {0};
 	
@@ -509,3 +524,190 @@ u16 pin_read(u16 pin)
 	rt_device_read(device_pin_t, 0, &pin_status, sizeof(pin_status));
 	return pin_status.status;
 }
+
+static void user_task(void *arg)
+{
+	u8 key_plug_flag = 0, key_net_flag = 0, key_factory_flag = 0; //按键标志，控制插座、网络、恢复工厂
+	u16 key_cnt = 0; //按键计时
+	u8 wifi_configured = 0, wifi_connected = 0; //配网、连网标志，有配置网络为1，连网成功为1
+	
+	while(1)
+	{
+		if (adw_wifi_curr_wifi_get(adw_wifi_curr_profile_get()) != 0) //有配置过网络
+			wifi_configured = 1;
+		else
+			wifi_configured = 0;
+		
+		if ((get_device_wifi_state() == MODULE_CONNECTED_WIFI) && (!wifi_connected)) //连网成功，熄蓝灯
+		{
+			tls_os_timer_stop(tiemr_led_handle);
+			pin_write(PIN_LED_BLUE, 0);
+			wifi_connected = 1;
+		}
+		
+		if(conf_was_reset)
+		{
+			if(demo_wifi_product_check())
+			{
+				produce_check = 1;
+				tls_os_timer_change(tiemr_led_handle, 350);
+				tls_os_timer_start(tiemr_led_handle);
+			}
+			else
+				produce_check = 0;
+		}
+		
+		if (!pin_read(PIN_KEY)) //上拉，按下为0
+		{
+			++key_cnt;
+			if (key_cnt >= 1000 + 1) //恢复出厂时间10s，+1是要除掉消抖之前一次计数，下面一样
+			{
+				if (!key_factory_flag)
+					key_factory_flag = 1;
+			}
+			else if (key_cnt >= 500 + 1) //切换配网方式5s
+			{
+				if (!key_net_flag)
+					key_net_flag = 1;
+			}
+		}
+		else
+		{
+			if (key_net_flag || key_factory_flag)
+				key_cnt = 0;
+			
+			if (key_net_flag)
+				key_net_flag = 0;
+			
+			if (key_factory_flag)
+				key_factory_flag = 0;
+			
+			if (key_cnt >= 1 + 1) //短按，消抖
+			{
+				key_plug_flag = 1;
+			}
+			key_cnt = 0;
+		}
+		
+		if (key_plug_flag)
+		{
+			key_plug_flag = 0;
+			
+			if(produce_check)
+			{
+				tls_os_timer_change(tiemr_led_handle, 75);
+				tls_os_timer_start(tiemr_led_handle);
+			}
+			else
+			{
+				plug = !plug;
+				pin_write(PIN_LED_RED, plug);
+				pin_write(PIN_PLUG, plug);
+				prop_send_by_name("Plug");
+			}
+		}
+		
+		if ((key_net_flag == 1) && !wifi_configured)
+		{
+			key_net_flag = 2;
+			
+			if(!adw_wifi_setup_mode_get()) //获取是否为AP配网，是为0
+			{
+				adw_wifi_setup_mode_set(1); //设置AirKiss配网，1
+				tls_os_timer_change(tiemr_led_handle, 75);
+				printf("key set wifi to airkiss\r\n");
+			}
+			else
+			{
+				adw_wifi_setup_mode_set(0);
+				tls_os_timer_change(tiemr_led_handle, 350);
+				printf("key set wifi to ap\r\n");
+			}
+			tls_os_timer_start(tiemr_led_handle);
+		}
+		
+		if ((key_factory_flag == 1) && wifi_configured)
+		{
+			key_factory_flag = 2;
+			
+			adw_wifi_setup_mode_set(1);
+			tls_os_timer_change(tiemr_led_handle, 75);
+			tls_os_timer_start(tiemr_led_handle);
+			ada_conf_reset(1);
+		}
+		
+		tls_os_time_delay(5);//由于定时周期为2ms，实际延时时间为2倍，10ms
+	}
+}
+
+static void timer_led_callback(void *ptmr, void *parg)
+{
+	static u8 led_blue_status = 0;
+	
+	pin_write(PIN_LED_BLUE, led_blue_status);
+	led_blue_status = !led_blue_status;
+	
+	if(*(u8*)parg)
+	{
+		plug = led_blue_status;
+		pin_write(PIN_LED_RED, plug);
+		pin_write(PIN_PLUG, plug);
+//		prop_send_by_name("Plug");
+	}
+}
+
+static u8 get_device_wifi_state(void)
+{
+	enum adw_wifi_conn_state state_g;
+	enum adw_scan_state scan_state_g;	 
+	u8 device_state=0xff;
+
+	adw_wifi_get_state(&state_g,&scan_state_g);
+	switch(state_g)
+	{
+	case	 WS_UP_AP:
+		if(adw_wifi_setup_mode_get() == 2)
+			device_state= MODULE_STANDBY;
+		else
+			device_state = MODULE_CONFIGURE_WIFI;
+		break;
+	
+	case	 WS_JOIN:			 
+		device_state = MODULE_CONNECTING_WIFI;
+		break;
+	
+	case	 WS_DHCP:
+	case	 WS_WAIT_CLIENT:
+		device_state = MODULE_CONNECTED_WIFI;
+		break;
+	
+	default :
+		break;
+	}
+	
+	if(ada_sprop_dest_mask & NODES_ADS)
+	{
+		device_state= MODULE_CONNECTED_CLOUD;
+	}
+	
+	return   device_state;
+}
+
+static int demo_wifi_product_check(void)
+{
+	struct adw_state *wifi = &adw_state;
+	struct adw_profile *prof;
+	struct adw_scan *scan;
+	char ssid_buf[33];
+	
+	for (scan = wifi->scan; scan < &wifi->scan[ADW_WIFI_SCAN_CT]; scan++) 
+	{
+		if (scan->ssid.len == 0)
+			break;
+		
+		adw_format_ssid(&scan->ssid, ssid_buf, sizeof(ssid_buf));
+		if(strcmp(ssid_buf, PRODUCT_WIFI_SSID) == 0)
+			return TRUE;
+	}
+	return FALSE;
+}	

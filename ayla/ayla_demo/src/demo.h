@@ -75,6 +75,6 @@ void dhcp_set_bound_handler(void (*handler)(ip_addr_t *));
 void ayla_demo_init(void);
 extern u8 *wpa_supplicant_get_mac(void);
 
-
+void user_init(void);
 
 #endif /* __AYLA_DEMO_H__ */
