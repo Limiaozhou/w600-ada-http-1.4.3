@@ -1801,6 +1801,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\ayla\drivers\bsp\drv_pin.c</FilePath>
             </File>
+            <File>
+              <FileName>multi_button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\ayla\drivers\devices\multi_button.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

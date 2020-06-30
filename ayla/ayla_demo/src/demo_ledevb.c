@@ -60,6 +60,7 @@
 #include "device.h"
 #include "hal/pin.h"
 #include "bsp/drv_pin.h"
+#include "devices/multi_button.h"
 
 #define BUILD_PID			 "SN0-8888888"
 #define BUILD_PROGNAME "ayla_ledevb_demo"
@@ -125,7 +126,9 @@ static char version[] = BUILD_PID " "BUILD_PROGNAME " " BUILD_STRING;
 static char demo_host_version[] = "1.0-rtk";	/* property template version */
 
 rt_device_t device_pin_t = NULL;
+struct button btn;
 tls_os_timer_t *tiemr_led_handle = NULL;
+u8 wifi_configured = 0, wifi_connected = 0; //配网、连网标志，有配置网络为1，连网成功为1
 u8 produce_check = 0; //产测模式
 
 enum
@@ -150,8 +153,10 @@ static enum ada_err jv_ctrl_set(struct ada_sprop *, const void *, size_t);
 static void pin_init(void);
 static void pin_write(u16 pin, u16 status);
 static u16 pin_read(u16 pin);
+static uint8_t button_read_pin(void);
 static void user_task(void *arg);
 static void timer_led_callback(void *ptmr, void *parg);
+static void button_callback(void *parg);
 static u8 get_device_wifi_state(void);
 static int demo_wifi_product_check(void);
 static void uesr_wifi_setup_mode_set(u8 mode);
@@ -459,8 +464,18 @@ void demo_idle(void)
 
 void user_init(void)
 {
+	tls_os_status_t err;
+	
 	uesr_wifi_setup_mode_set(1); //启动设置AirKiss配网模式，1为AirKiss，0为AP，2为等待
+	
 	pin_init(); //按键、继电器、指示灯的普通IO口初始化
+	button_init(&btn, button_read_pin, PIN_LOW); //按键初始化
+	
+	button_attach(&btn, SINGLE_CLICK, button_callback);
+	button_attach(&btn, LONG_RRESS_START, button_callback);
+	button_attach(&btn, LONG_PRESS_HOLD, button_callback);
+	button_start (&btn);
+	
 	tls_os_task_create(NULL, "user_task",
 	                    user_task,
 	                    (void *)0,
@@ -469,8 +484,9 @@ void user_init(void)
 	                    configMAX_PRIORITIES / 2,
 	                    0); //创建应用任务user_task
 	
-	tls_os_timer_create(&tiemr_led_handle, timer_led_callback, &produce_check, 75, 1, (u8*)"timer_led"); //创建led定时器timer_led_callback
-	tls_os_timer_start(tiemr_led_handle);
+	err = tls_os_timer_create(&tiemr_led_handle, timer_led_callback, &produce_check, 75, 1, (u8*)"timer_led"); //创建led定时器timer_led_callback
+	if (!err)
+		tls_os_timer_start(tiemr_led_handle);
 }
 
 static void pin_init(void)
@@ -527,12 +543,13 @@ static u16 pin_read(u16 pin)
 	return pin_status.status;
 }
 
+static uint8_t button_read_pin(void)
+{
+	return (uint8_t)pin_read(PIN_KEY);
+}
+
 static void user_task(void *arg)
 {
-	u8 key_plug_flag = 0, key_net_flag = 0, key_factory_flag = 0; //按键标志，控制插座、网络、恢复工厂
-	u16 key_cnt = 0; //按键计时
-	u8 wifi_configured = 0, wifi_connected = 0; //配网、连网标志，有配置网络为1，连网成功为1
-	
 	while (1)
 	{
 		if ((!wifi_configured) && (adw_wifi_curr_wifi_get(adw_wifi_curr_profile_get()) != 0)) //有配置过网络
@@ -558,86 +575,9 @@ static void user_task(void *arg)
 		else
 			produce_check = 0;
 		
-		if (!pin_read(PIN_KEY)) //上拉，按下为0
-		{
-			++key_cnt;
-			if (key_cnt >= 1000 + 1) //恢复出厂时间10s，+1是要除掉消抖之前一次计数，下面一样
-			{
-				if (!key_factory_flag)
-					key_factory_flag = 1;
-			}
-			else if (key_cnt >= 500 + 1) //切换配网方式5s
-			{
-				if (!key_net_flag)
-					key_net_flag = 1;
-			}
-		}
-		else
-		{
-			if (key_net_flag || key_factory_flag)
-				key_cnt = 0;
-			
-			if (key_net_flag)
-				key_net_flag = 0;
-			
-			if (key_factory_flag)
-				key_factory_flag = 0;
-			
-			if (key_cnt >= 1 + 1) //短按，消抖
-			{
-				key_plug_flag = 1;
-			}
-			key_cnt = 0;
-		}
+		button_ticks();
 		
-		if (key_plug_flag)
-		{
-			key_plug_flag = 0;
-			
-			if(produce_check)
-			{
-				tls_os_timer_change(tiemr_led_handle, 75);
-				tls_os_timer_start(tiemr_led_handle);
-			}
-			else
-			{
-				Switch_Control = !Switch_Control;
-				pin_write(PIN_LED_RED, Switch_Control);
-				pin_write(PIN_PLUG, Switch_Control);
-				prop_send_by_name("Switch_Control");
-			}
-		}
-		
-		if ((!wifi_configured) && (key_net_flag == 1)) //没有配置过网络才能切换配网方式
-		{
-			key_net_flag = 2;
-			
-			if(!adw_wifi_setup_mode_get()) //获取是否为AP配网，是为0
-			{
-				uesr_wifi_setup_mode_set(1);
-				tls_os_timer_change(tiemr_led_handle, 75);
-				printf("User key set wifi to airkiss\r\n");
-			}
-			else
-			{
-				uesr_wifi_setup_mode_set(0);
-				tls_os_timer_change(tiemr_led_handle, 350);
-				printf("User key set wifi to ap\r\n");
-			}
-			tls_os_timer_start(tiemr_led_handle);
-		}
-		
-		if (wifi_configured && (key_factory_flag == 1)) //有配置过网络才能恢复出厂
-		{
-			key_factory_flag = 2;
-			
-			printf("User key set to factory\r\n");
-			tls_os_timer_change(tiemr_led_handle, 75);
-			tls_os_timer_start(tiemr_led_handle);
-			ada_conf_reset(1);
-		}
-		
-		tls_os_time_delay(5);//由于定时周期为2ms，实际延时时间为2倍，10ms
+		tls_os_time_delay(2);//由于定时周期为2ms，实际延时时间为2倍
 	}
 }
 
@@ -653,6 +593,67 @@ static void timer_led_callback(void *ptmr, void *parg)
 		Switch_Control = led_blue_status;
 		pin_write(PIN_LED_RED, Switch_Control);
 		pin_write(PIN_PLUG, Switch_Control);
+	}
+}
+
+static void button_callback(void *btn)
+{
+	uint32_t btn_event_val;
+	static uint16_t long_hold_ticks = 0;
+	static uint8_t long_hold_flag = 1;
+	
+	btn_event_val = get_button_event((struct button *)btn);
+	switch (btn_event_val)
+	{
+		case SINGLE_CLICK :
+			if(produce_check)
+			{
+				tls_os_timer_change(tiemr_led_handle, 75);
+				tls_os_timer_start(tiemr_led_handle);
+			}
+			else
+			{
+				Switch_Control = !Switch_Control;
+				pin_write(PIN_LED_RED, Switch_Control);
+				pin_write(PIN_PLUG, Switch_Control);
+				prop_send_by_name("Switch_Control");
+			}
+			break;
+			
+		case LONG_RRESS_START :
+			long_hold_ticks = 0;
+			long_hold_flag = 1;
+			if (!wifi_configured) //没有配置过网络才能切换配网方式
+			{
+				if(!adw_wifi_setup_mode_get()) //获取是否为AP配网，是为0
+				{
+					uesr_wifi_setup_mode_set(1);
+					tls_os_timer_change(tiemr_led_handle, 75);
+					printf("User key set wifi to airkiss\r\n");
+				}
+				else
+				{
+					uesr_wifi_setup_mode_set(0);
+					tls_os_timer_change(tiemr_led_handle, 350);
+					printf("User key set wifi to ap\r\n");
+				}
+				tls_os_timer_start(tiemr_led_handle);
+			}
+			break;
+			
+		case LONG_PRESS_HOLD :
+			if(long_hold_flag && ((++long_hold_ticks) > LONG_TICKS)) //长按之后再继续按5s，即长按达到10s
+			{
+				if (wifi_configured) //有配置过网络才能恢复出厂
+				{
+					printf("User key set to factory\r\n");
+					tls_os_timer_change(tiemr_led_handle, 75);
+					tls_os_timer_start(tiemr_led_handle);
+					ada_conf_reset(1);
+				}
+				long_hold_flag = 0;
+			}
+			break;
 	}
 }
 
